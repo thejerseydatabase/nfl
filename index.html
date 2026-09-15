@@ -544,6 +544,9 @@ function csvRowsToMatches(rows){
       country: r[13] || null,
       ot: r[14] || null
     }))
+    // A row only counts as a properly entered fixture once it has both teams and a real
+    // date - a bare draw placeholder (e.g. a team name with no date yet) shouldn't show up.
+    .filter(m => m.away && m.date)
     .sort((a,b) => (b.date||'').localeCompare(a.date||''));
 }
 
