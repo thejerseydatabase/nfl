@@ -433,6 +433,9 @@
     <select id="f-team" aria-label="Team">
       <option value="">Any team</option>
     </select>
+    <select id="f-year" aria-label="Year">
+      <option value="">Any year</option>
+    </select>
     <select id="f-status" aria-label="Show results, fixtures, or all">
       <option value="results">Results</option>
       <option value="fixtures">Fixtures</option>
@@ -480,6 +483,10 @@ let MATCHES = [{"gameId": "1", "week": "1", "date": "2026-09-09", "away": "New E
 // The embedded snapshot preserves the spreadsheet's own row order, which isn't
 // necessarily chronological - sort it the same way the live CSV parser does.
 MATCHES.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+// The embedded snapshot predates the year filter - derive it from each match's date the same
+// way csvRowsToMatches now does, so the snapshot and any live-loaded data agree.
+MATCHES.forEach(m => { m.year = seasonStartYear(m.date); });
+
 const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRJs_65UCo9iD73yuzKhQpTPQkc05BGdzhD_zCUgAbGeF2jgZ9FzSSiAcZ5gufCyHoVePlWfss2mN0G/pub?gid=1474508458&single=true&output=csv";
 
 // Minimal CSV parser that handles quoted fields (commas/newlines inside quotes, "" as an escaped quote)
@@ -519,6 +526,15 @@ function parseSheetDate(s){
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
+// A season runs Sep-Jan, crossing a calendar year boundary for the playoffs - group by the
+// year it started in (Sep 2026 and Jan 2027 are both the "2026" season) so the year filter
+// never splits one season's games into two entries.
+function seasonStartYear(date){
+  if(!date) return null;
+  const y = parseInt(date.slice(0,4), 10), m = parseInt(date.slice(5,7), 10);
+  return m >= 7 ? y : y - 1;
+}
+
 function csvRowsToMatches(rows){
   const [header, ...data] = rows;
   return data
@@ -527,23 +543,27 @@ function csvRowsToMatches(rows){
     // layout (no jersey columns, scores combined as "24 - 20" text, Week holding a date) -
     // not yet handled, so stop at the first row whose Week isn't a plain 1-2 digit number.
     .filter(r => r[1] && /^\d{1,2}$/.test(r[1]))
-    .map(r => ({
-      gameId: r[0] || null,
-      week: r[1] || null,
-      date: parseSheetDate(r[2]),
-      away: r[3],
-      awayJersey: r[4] || null,
-      awayImg: r[5] || null,
-      awayScore: r[6] === '' ? null : parseFloat(r[6]),
-      homeScore: r[7] === '' ? null : parseFloat(r[7]),
-      homeJersey: r[8] || null,
-      homeImg: r[9] || null,
-      home: r[10],
-      stadium: r[11] || null,
-      city: r[12] || null,
-      country: r[13] || null,
-      ot: r[14] || null
-    }))
+    .map(r => {
+      const date = parseSheetDate(r[2]);
+      return {
+        gameId: r[0] || null,
+        week: r[1] || null,
+        date,
+        year: seasonStartYear(date),
+        away: r[3],
+        awayJersey: r[4] || null,
+        awayImg: r[5] || null,
+        awayScore: r[6] === '' ? null : parseFloat(r[6]),
+        homeScore: r[7] === '' ? null : parseFloat(r[7]),
+        homeJersey: r[8] || null,
+        homeImg: r[9] || null,
+        home: r[10],
+        stadium: r[11] || null,
+        city: r[12] || null,
+        country: r[13] || null,
+        ot: r[14] || null
+      };
+    })
     // A row only counts as a properly entered fixture once it has both teams and a real
     // date - a bare draw placeholder (e.g. a team name with no date yet) shouldn't show up.
     .filter(m => m.away && m.date)
@@ -572,6 +592,7 @@ async function loadLiveData(){
 
     document.getElementById('total-count').textContent = MATCHES.length;
     document.getElementById('kit-count').textContent = MATCHES.filter(m => m.homeImg || m.awayImg).length;
+    setDefaultYear();
     setDefaultStatus();
     applyFilters();
 
@@ -604,6 +625,7 @@ const matchupEl = document.getElementById('matchup');
 const weekEl = document.getElementById('week-filter');
 const jerseyFilterEl = document.getElementById('jersey-filter');
 const fTeam = document.getElementById('f-team');
+const fYear = document.getElementById('f-year');
 const fStatus = document.getElementById('f-status');
 const clearBtn = document.getElementById('clear-filters');
 const statsEl = document.getElementById('jersey-stats');
@@ -628,7 +650,19 @@ function refreshTeamList(){
   if(TEAM_LIST.includes(curB)) fTeamB.value = curB;
   if(TEAM_LIST.includes(curT)) fTeam.value = curT;
 
+  const curYear = fYear.value;
+  const years = [...new Set(MATCHES.map(m => m.year).filter(Boolean))].sort((a,b) => b - a);
+  fYear.innerHTML = '<option value="">Any year</option>' + years.map(y => `<option value="${y}">${y}</option>`).join('');
+  if(years.some(y => String(y) === curYear)) fYear.value = curYear;
+
   refreshJerseyFilterOptions();
+}
+// Default to the most recent season - a multi-year history shouldn't require scrolling past
+// everything older just to see the current one. Only called on initial/live-data load, never
+// from the per-filter refresh inside refreshTeamList, so it never clobbers a year the user picked.
+function setDefaultYear(){
+  const years = [...new Set(MATCHES.map(m => m.year).filter(Boolean))].sort((a,b) => b - a);
+  fYear.value = years.length ? String(years[0]) : '';
 }
 
 // When a specific team is selected in browse mode, only offer jersey types that team has
@@ -662,6 +696,7 @@ modeH2hBtn.addEventListener('click', () => setMode('h2h'));
 fTeamA.addEventListener('change', applyFilters);
 fTeamB.addEventListener('change', applyFilters);
 fTeam.addEventListener('change', () => { refreshJerseyFilterOptions(); applyFilters(); });
+fYear.addEventListener('change', applyFilters);
 jerseyFilterEl.addEventListener('change', applyFilters);
 
 function matchesJerseyFilter(m){
@@ -786,6 +821,7 @@ function setDefaultStatus(){
 
 function applyFilters(){
   const week = weekEl.value;
+  const year = fYear.value;
   let rows;
 
   if(mode === 'h2h'){
@@ -793,13 +829,15 @@ function applyFilters(){
     rows = MATCHES.filter(m => {
       const isPairing = (m.home === a && m.away === b) || (m.home === b && m.away === a);
       const matchesWeek = !week || m.week === week;
-      return isPairing && matchesWeek && matchesJerseyFilter(m);
+      const matchesYear = !year || String(m.year) === year;
+      return isPairing && matchesWeek && matchesYear && matchesJerseyFilter(m);
     });
   } else {
     rows = MATCHES.filter(m => {
       const matchesQ = !fTeam.value || m.home === fTeam.value || m.away === fTeam.value;
       const matchesWeek = !week || m.week === week;
-      return matchesQ && matchesWeek && matchesJerseyFilter(m);
+      const matchesYear = !year || String(m.year) === year;
+      return matchesQ && matchesWeek && matchesYear && matchesJerseyFilter(m);
     });
   }
 
@@ -823,6 +861,7 @@ weekEl.addEventListener('change', applyFilters);
 fStatus.addEventListener('change', applyFilters);
 clearBtn.addEventListener('click', () => {
   fTeam.value = '';
+  fYear.value = '';
   jerseyFilterEl.value = '';
   weekEl.value = '';
   refreshJerseyFilterOptions();
@@ -918,6 +957,7 @@ document.getElementById('total-count').textContent = MATCHES.length;
 document.getElementById('kit-count').textContent = MATCHES.filter(m => m.homeImg || m.awayImg).length;
 
 refreshTeamList();
+setDefaultYear();
 setDefaultStatus();
 applyFilters();
 
