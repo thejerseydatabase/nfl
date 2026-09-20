@@ -404,6 +404,7 @@
   .c-photos{display:flex;gap:3px;justify-content:center;}
   .photo-dot{width:7px;height:7px;border-radius:50%;background:var(--loss);}
   .photo-dot.filled{background:var(--win);}
+  .row-note{grid-column:1/-1;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.03em;color:var(--text-dim2);padding-top:4px;}
   .no-results{padding:32px 16px;text-align:center;color:var(--text-dim);font-size:13.5px;}
   .list-scroll{max-height:640px;overflow-y:auto;}
 
@@ -818,7 +819,7 @@ function renderMatchup(m){
   let scoreHtml;
   if(played){
     const hr = resultFor(m,'home'), ar = resultFor(m,'away');
-    scoreHtml = `<div class="score-tiles"><div class="tile ${hr}">${m.homeScore}</div><span class="tile-sep">&ndash;</span><div class="tile ${ar}">${m.awayScore}</div></div><p class="ft-label">${m.ot ? 'Final (OT)' : 'Final'}</p>`;
+    scoreHtml = `<div class="score-tiles"><div class="tile ${hr}">${m.homeScore}</div><span class="tile-sep">&ndash;</span><div class="tile ${ar}">${m.awayScore}</div></div><p class="ft-label">${m.ot ? 'Final (' + m.ot + ')' : 'Final'}</p>`;
   } else {
     scoreHtml = `<div class="vs-label">VS</div><p class="ft-label">Not yet played</p>`;
   }
@@ -867,6 +868,7 @@ function renderList(){
         <span class="jcode" title="${jerseyLabel(m.awayJersey)} jersey"><span class="jname-full">${jerseyCode(m.awayJersey)}</span><span class="jname-short">${jerseyAbbrev(m.awayJersey)}</span></span>
         <span class="c-comp" title="${m.week ? 'Week ' + m.week : ''}">${m.week || ''}</span>
         <span class="c-photos"><span class="photo-dot ${m.homeImg?'filled':''}"></span><span class="photo-dot ${m.awayImg?'filled':''}"></span></span>
+        ${m.ot ? `<span class="row-note">${m.ot}</span>` : ''}
       </div>`;
   }).join('');
 
