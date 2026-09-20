@@ -955,8 +955,9 @@ function renderJerseyStats(){
   if(!fTeam.value){ statsEl.hidden = true; statsEl.innerHTML = ''; return; }
 
   const week = weekEl.value;
+  const year = fYear.value;
   const teamMatches = MATCHES.filter(m =>
-    (m.home === fTeam.value || m.away === fTeam.value) && (!week || m.week === week)
+    (m.home === fTeam.value || m.away === fTeam.value) && (!week || m.week === week) && (!year || String(m.year) === year)
   );
 
   const buckets = {};
@@ -1000,7 +1001,7 @@ function renderJerseyStats(){
 
   statsEl.innerHTML = `
     <button class="stats-toggle" id="stats-toggle" aria-expanded="false">
-      <span>${fTeam.value} \u2014 jersey breakdown${week ? ' (Week ' + week + ')' : ''}</span><i class="ti ti-chevron-down"></i>
+      <span>${fTeam.value} \u2014 jersey breakdown${week ? ' (Week ' + week + ')' : ''}${year ? ' \u2014 ' + year : ''}</span><i class="ti ti-chevron-down"></i>
     </button>
     <div class="stats-body" id="stats-body" hidden>
       <table>
