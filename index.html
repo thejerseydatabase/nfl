@@ -126,7 +126,7 @@
   .multi-select{position:relative;flex:1;min-width:150px;}
   .multi-select-btn{
     background:var(--surface);border:1px solid var(--line);color:var(--text);
-    font-family:'Inter',sans-serif;font-size:14px;padding:11px 14px;border-radius:8px;outline:none;width:100%;
+    font-family:'Inter',sans-serif;font-size:13.5px;padding:10px 12px;border-radius:8px;outline:none;width:100%;
     text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .multi-select-btn:focus, .multi-select-btn[aria-expanded="true"]{border-color:var(--accent);box-shadow:0 0 0 3px rgba(232,184,75,0.15);}
@@ -159,8 +159,8 @@
     border:1px solid var(--line);
     color:var(--text);
     font-family:'Inter',sans-serif;
-    font-size:14px;
-    padding:11px 14px;
+    font-size:13.5px;
+    padding:10px 12px;
     border-radius:8px;
     outline:none;
   }
@@ -488,7 +488,7 @@
       <span>Jersey ladder</span><i class="ti ti-chevron-down"></i>
     </button>
     <div class="stats-body" id="ladder-body" hidden>
-      <div class="filters" style="grid-template-columns:200px;margin-bottom:14px;">
+      <div class="controls" style="margin-bottom:14px;">
         <select id="f-ladder-year" aria-label="Jersey ladder year"><option value="">All-time</option></select>
       </div>
       <div class="list-scroll" style="max-height:480px;">
@@ -1024,6 +1024,8 @@ function renderJerseyLadder(){
 }
 
 function renderJerseyStats(){
+  const prevStatsBody = document.getElementById('stats-body');
+  const statsWasOpen = !!(prevStatsBody && !prevStatsBody.hidden);
   if(!fTeam.value){ statsEl.hidden = true; statsEl.innerHTML = ''; return; }
 
   const week = weekEl.value;
@@ -1072,10 +1074,10 @@ function renderJerseyStats(){
   }
 
   statsEl.innerHTML = `
-    <button class="stats-toggle" id="stats-toggle" aria-expanded="false">
+    <button class="stats-toggle" id="stats-toggle" aria-expanded="${statsWasOpen}">
       <span>${fTeam.value} \u2014 jersey breakdown${week ? ' (Week ' + week + ')' : ''}${year ? ' \u2014 ' + year : ''}</span><i class="ti ti-chevron-down"></i>
     </button>
-    <div class="stats-body" id="stats-body" hidden>
+    <div class="stats-body" id="stats-body" ${statsWasOpen ? '' : 'hidden'}>
       <table>
         <thead><tr><th>Jersey</th><th>GP</th><th>W</th><th>D</th><th>L</th><th>PF</th><th>PA</th><th>PD</th></tr></thead>
         <tbody>
@@ -1088,6 +1090,7 @@ function renderJerseyStats(){
 
   const toggle = document.getElementById('stats-toggle');
   const body = document.getElementById('stats-body');
+  toggle.classList.toggle('open', statsWasOpen);
   toggle.addEventListener('click', () => {
     const open = !body.hidden;
     body.hidden = open;
